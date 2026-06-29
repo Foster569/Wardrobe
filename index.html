@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Wardrobe</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0f0f0f; color: #d4d0c8; font-family: Georgia, "Times New Roman", serif; min-height: 100vh; }
+    button { cursor: pointer; font-family: inherit; transition: transform 0.12s; }
+    button:hover { transform: translateY(-1px); }
+    input, select { font-family: inherit; }
+    select option { background: #1a1a1a; }
+
+    /* ---- PASSWORD SCREEN ---- */
+    #lock-screen {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 20px;
+    }
+    .lock-box {
+      background: #161616; border: 1px solid #3a3a3a; border-radius: 6px;
+      padding: 40px 32px; max-width: 360px; width: 100%; text-align: center;
+    }
+    .lock-box h1 { color: #c4a878; font-size: 22px; font-weight: 400; margin-bottom: 8px; letter-spacing: 0.5px; }
+    .lock-box p { color: #8a8a8a; font-size: 13px; margin-bottom: 28px; }
+    .lock-box input {
+      width: 100%; background: #0a0a0a; color: #d4d0c8;
+      border: 1px solid #3a3a3a; padding: 10px 14px; border-radius: 3px;
+      font-size: 14px; outline: none; margin-bottom: 12px; letter-spacing: 2px;
+    }
+    .lock-box input:focus { border-color: #c4a878; }
+    .lock-btn {
+      width: 100%; background: #c4a878; color: #0f0f0f; border: none;
+      padding: 10px; border-radius: 3px; font-size: 14px; font-weight: 600;
+    }
+    .lock-error { color: #d94040; font-size: 12px; margin-top: 10px; }
+
+    /* ---- APP ---- */
+    #app { display: none; }
+
+    /* ---- HEADER ---- */
+    .app-header {
+      border-bottom: 1px solid #2a2a2a; padding: 18px 24px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 12px;
+    }
+    .app-title { color: #c4a878; font-size: 22px; font-weight: 400; letter-spacing: 0.5px; }
+    .app-subtitle { color: #8a8a8a; font-size: 11px; margin-top: 3px; }
+    .tab-bar { display: flex; gap: 8px; }
+    .tab-btn {
+      padding: 7px 16px; border-radius: 3px; font-size: 13px; border: 1px solid #2a2a2a;
+      background: transparent; color: #8a8a8a;
+    }
+    .tab-btn.active { background: #2a2520; color: #c4a878; border-color: #5a4a3a; }
+
+    /* ---- SYNC STATUS ---- */
+    .sync-bar {
+      padding: 6px 24px; font-size: 11px; display: none;
+      align-items: center; gap: 8px;
+    }
+    .sync-bar.saving  { display: flex; background: #1a1a2a; color: #8a8aaa; }
+    .sync-bar.saved   { display: flex; background: #0f2010; color: #60c080; }
+    .sync-bar.error   { display: flex; background: #2a1010; color: #d94040; }
+
+    /* ---- MAIN CONTENT ---- */
+    .page { padding: 24px; max-width: 1200px; margin: 0 auto; display: none; }
+    .page.active { display: block; }
+
+    /* ---- OUTFIT BUILDER ---- */
+    .section {
+      background: #161616; border: 1px solid #2a2a2a;
+      padding: 20px; border-radius: 4px; margin-bottom: 20px;
+    }
+    .section-title {
+      font-size: 12px; text-transform: uppercase; letter-spacing: 2px;
+      color: #c4a878; font-weight: 400; margin-bottom: 14px;
+    }
+    .slot-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap: 12px; }
+    .slot {
+      background: #0a0a0a; border: 1px solid #2a2a2a; border-radius: 4px;
+      padding: 12px; min-height: 72px; position: relative;
+    }
+    .slot.filled { background: #1f1a14; border-color: #5a4a3a; }
+    .slot-label { font-size: 10px; color: #8a8a8a; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .slot-name { font-size: 13px; line-height: 1.3; }
+    .slot-brand { font-size: 11px; color: #8a8a8a; margin-top: 2px; }
+    .slot-empty { font-size: 12px; color: #5a5a5a; font-style: italic; }
+    .slot-clear {
+      position: absolute; top: 6px; right: 6px; background: none; border: none;
+      color: #8a8a8a; padding: 2px; font-size: 14px; line-height: 1;
+    }
+
+    /* verdict */
+    .verdict-banner {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px; border-radius: 4px; margin-top: 14px;
+    }
+    .verdict-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .verdict-label { font-size: 13px; font-weight: 600; letter-spacing: 0.5px; }
+    .verdict-sub { font-size: 12px; color: #8a8a8a; }
+    .issue-row {
+      display: flex; gap: 10px; align-items: flex-start;
+      padding: 10px 14px; border-radius: 4px; margin-top: 6px; font-size: 13px;
+    }
+    .issue-icon { flex-shrink: 0; margin-top: 1px; font-size: 14px; }
+    .issue-type {
+      font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+      font-weight: 600; margin-right: 8px;
+    }
+    .issue-msg { color: #c8c4bc; line-height: 1.5; }
+
+    /* outfit controls */
+    .outfit-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
+    .rating-btn {
+      padding: 6px 14px; border-radius: 3px; font-size: 12px; font-weight: 600; border: 1px solid;
+      background: transparent;
+    }
+
+    /* category pickers */
+    .picker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px,1fr)); gap: 8px; margin-top: 10px; }
+    .picker-card {
+      padding: 10px 12px; border: 1px solid #2a2a2a; border-radius: 3px;
+      cursor: pointer; background: #0f0f0f; font-size: 13px; transition: background 0.15s;
+      position: relative;
+    }
+    .picker-card:hover { background: #1f1f1f; }
+    .picker-card.selected { background: #2a2520; border-color: #c4a878; }
+    .picker-card-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 20px; }
+    .picker-card-sub { font-size: 10px; color: #8a8a8a; margin-top: 2px; }
+    .picker-check {
+      position: absolute; top: 10px; right: 10px; color: #c4a878; display: none; font-size: 14px;
+    }
+    .picker-card.selected .picker-check { display: block; }
+
+    /* color dots */
+    .color-dots { display: flex; gap: 4px; margin-top: 8px; }
+    .color-dot { width: 13px; height: 13px; border-radius: 50%; border: 1px solid #2a2a2a; flex-shrink: 0; }
+
+    /* ---- CLOSET ---- */
+    .closet-toolbar {
+      display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; align-items: center;
+    }
+    .search-wrap { position: relative; flex: 1; min-width: 200px; }
+    .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #8a8a8a; font-size: 14px; pointer-events: none; }
+    .search-input {
+      width: 100%; background: #0a0a0a; color: #d4d0c8; border: 1px solid #2a2a2a;
+      padding: 8px 12px 8px 34px; border-radius: 3px; font-size: 13px; outline: none;
+    }
+    .search-input:focus { border-color: #c4a878; }
+    .filter-select {
+      background: #0a0a0a; color: #d4d0c8; border: 1px solid #2a2a2a;
+      padding: 8px 12px; border-radius: 3px; font-size: 13px; cursor: pointer;
+    }
+    .items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px,1fr)); gap: 12px; }
+    .item-card {
+      background: #161616; border: 1px solid #2a2a2a; border-radius: 4px; padding: 14px;
+    }
+    .item-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+    .item-meta { font-size: 11px; color: #c4a878; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+    .item-name { font-size: 14px; line-height: 1.3; }
+    .item-sub { font-size: 12px; color: #8a8a8a; margin-top: 3px; }
+    .item-pattern { font-size: 11px; color: #6a7a8a; margin-top: 2px; }
+    .item-mate { font-size: 11px; color: #5a6a3a; margin-top: 3px; }
+    .item-note { font-size: 11px; color: #d97842; margin-top: 3px; font-style: italic; }
+    .item-actions { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+    .icon-btn {
+      background: none; border: 1px solid #3a3a3a; color: #8a8a8a;
+      padding: 4px 6px; border-radius: 3px; font-size: 13px; line-height: 1;
+    }
+    .icon-btn.danger { color: #5a5a5a; }
+
+    /* ---- BUTTONS ---- */
+    .btn-primary {
+      background: #c4a878; color: #0f0f0f; border: none;
+      padding: 8px 14px; border-radius: 3px; font-size: 13px; font-weight: 600;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-secondary {
+      background: transparent; color: #d4d0c8; border: 1px solid #3a3a3a;
+      padding: 7px 12px; border-radius: 3px; font-size: 12px;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .btn-danger {
+      background: transparent; color: #d97842; border: 1px solid #7a3a3a;
+      padding: 7px 12px; border-radius: 3px; font-size: 13px;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .ml-auto { margin-left: auto; }
+
+    /* ---- MODAL ---- */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200; padding: 20px;
+    }
+    .modal-box {
+      background: #161616; border: 1px solid #3a3a3a; border-radius: 6px;
+      padding: 24px; max-width: 480px; width: 100%; max-height: 90vh; overflow-y: auto;
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .modal-title { color: #c4a878; font-size: 17px; font-weight: 400; }
+    .modal-close { background: none; border: none; color: #8a8a8a; font-size: 20px; line-height: 1; }
+    .form-field { margin-bottom: 13px; }
+    .form-label { display: block; font-size: 11px; color: #8a8a8a; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+    .form-input {
+      width: 100%; background: #0a0a0a; color: #d4d0c8; border: 1px solid #2a2a2a;
+      padding: 8px 12px; border-radius: 3px; font-size: 13px; outline: none;
+    }
+    .form-input:focus { border-color: #c4a878; }
+    .form-hint { font-size: 10px; color: #5a5a5a; margin-top: 4px; }
+    .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+    /* ---- EMPTY STATE ---- */
+    .empty { text-align: center; padding: 60px 20px; color: #8a8a8a; font-size: 14px; }
+
+    /* ---- LOADING ---- */
+    .loading { text-align: center; padding: 80px 20px; color: #8a8a8a; font-size: 14px; }
+  </style>
+</head>
+<body>
+
+<!-- ============================================================ -->
+<!-- PASSWORD SCREEN -->
+<!-- ============================================================ -->
+<div id="lock-screen">
+  <div class="lock-box">
+    <h1>The Wardrobe</h1>
+    <p>Enter the access code to continue.</p>
+    <input type="password" id="pw-input" placeholder="Password" autocomplete="current-password" />
+    <button class="lock-btn" onclick="checkPassword()">Enter</button>
+    <div class="lock-error" id="pw-error"></div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- APP -->
+<!-- ============================================================ -->
+<div id="app">
+
+  <!-- Header -->
+  <div class="app-header">
+    <div>
+      <div class="app-title">The Wardrobe</div>
+      <div class="app-subtitle" id="inventory-count">Loading…</div>
+    </div>
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tab-builder-btn" onclick="switchTab('builder')">Outfit Builder</button>
+      <button class="tab-btn" id="tab-closet-btn" onclick="switchTab('closet')">Closet</button>
+    </div>
+  </div>
+
+  <!-- Sync status bar -->
+  <div class="sync-bar" id="sync-bar">
+    <span id="sync-msg"></span>
+  </div>
+
+  <!-- BUILDER TAB -->
+  <div class="page active" id="page-builder">
+
+    <!-- Today's Outfit -->
+    <div class="section">
+      <div class="section-title">Today's Outfit</div>
+      <div class="slot-grid" id="slot-grid">
+        <div class="slot" id="slot-jacket">
+          <div class="slot-label">Jacket</div>
+          <div class="slot-empty">not selected</div>
+        </div>
+        <div class="slot" id="slot-shirt">
+          <div class="slot-label">Shirt</div>
+          <div class="slot-empty">not selected</div>
+        </div>
+        <div class="slot" id="slot-pants">
+          <div class="slot-label">Pants</div>
+          <div class="slot-empty">not selected</div>
+        </div>
+        <div class="slot" id="slot-hat">
+          <div class="slot-label">Hat</div>
+          <div class="slot-empty">not selected</div>
+        </div>
+      </div>
+
+      <!-- Clash analysis injected here -->
+      <div id="clash-panel"></div>
+
+      <!-- Rating controls injected here -->
+      <div id="outfit-controls"></div>
+    </div>
+
+    <!-- Pickers -->
+    <div class="section">
+      <div class="section-title" id="picker-title-jacket">Jackets</div>
+      <div class="picker-grid" id="picker-jacket"></div>
+    </div>
+    <div class="section">
+      <div class="section-title" id="picker-title-shirt">Shirts</div>
+      <div class="picker-grid" id="picker-shirt"></div>
+    </div>
+    <div class="section">
+      <div class="section-title" id="picker-title-pants">Pants</div>
+      <div class="picker-grid" id="picker-pants"></div>
+    </div>
+    <div class="section">
+      <div class="section-title" id="picker-title-hat">Hats</div>
+      <div class="picker-grid" id="picker-hat"></div>
+    </div>
+
+  </div><!-- /page-builder -->
+
+  <!-- CLOSET TAB -->
+  <div class="page" id="page-closet">
+    <div class="closet-toolbar">
+      <div class="search-wrap">
+        <span class="search-icon">&#x2315;</span>
+        <input class="search-input" type="text" id="search-input" placeholder="Search brand, color, pattern…" oninput="renderCloset()" />
+      </div>
+      <select class="filter-select" id="cat-filter" onchange="renderCloset()">
+        <option value="all">All</option>
+        <option value="shirt">Shirts</option>
+        <option value="jacket">Jackets</option>
+        <option value="pants">Pants</option>
+        <option value="hat">Hats</option>
+      </select>
+      <button class="btn-primary" onclick="openAddModal()">+ Add Item</button>
+      <button class="btn-danger ml-auto" onclick="confirmReset()">↺ Reset</button>
+    </div>
+    <div id="items-grid" class="items-grid"></div>
+    <div id="closet-empty" class="empty" style="display:none">No items match your search.</div>
+  </div><!-- /page-closet -->
+
+  <div style="padding:24px; text-align:center; color:#5a5a5a; font-size:11px; border-top:1px solid #2a2a2a; margin-top:20px;">
+    Synced to Firebase · Shared inventory
+  </div>
+</div><!-- /app -->
+
+<!-- ============================================================ -->
+<!-- MODAL (shared for add + edit) -->
+<!-- ============================================================ -->
+<div class="modal-overlay" id="item-modal" style="display:none" onclick="closeModalOnOverlay(event)">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Add Item</div>
+      <button class="modal-close" onclick="closeModal()">&#x2715;</button>
+    </div>
+    <div class="form-field">
+      <label class="form-label">Category</label>
+      <select class="form-input" id="f-category">
+        <option value="shirt">Shirt</option>
+        <option value="jacket">Jacket</option>
+        <option value="pants">Pants</option>
+        <option value="hat">Hat</option>
+      </select>
+    </div>
+    <div class="form-field">
+      <label class="form-label">Name *</label>
+      <input class="form-input" id="f-name" type="text" placeholder="e.g. Charcoal Wool Blazer" />
+    </div>
+    <div class="form-field">
+      <label class="form-label">Brand</label>
+      <input class="form-input" id="f-brand" type="text" placeholder="e.g. Jos. A. Bank" />
+    </div>
+    <div class="form-field">
+      <label class="form-label">Colors (comma-separated)</label>
+      <input class="form-input" id="f-colors" type="text" placeholder="e.g. navy, white" />
+      <div class="form-hint">Available: white, black, navy, blue, gray, lavender, pink, purple, brown, tan, olive, orange, charcoal</div>
+    </div>
+    <div class="form-field">
+      <label class="form-label">Pattern</label>
+      <select class="form-input" id="f-pattern">
+        <option value="solid">Solid</option>
+        <option value="stripe">Stripe</option>
+        <option value="check">Check</option>
+        <option value="plaid">Plaid</option>
+        <option value="windowpane">Windowpane</option>
+        <option value="herringbone">Herringbone</option>
+        <option value="houndstooth">Houndstooth</option>
+        <option value="tattersall">Tattersall</option>
+        <option value="gingham">Gingham</option>
+        <option value="geometric">Geometric</option>
+        <option value="dobby">Dobby</option>
+        <option value="glen-check">Glen Check</option>
+        <option value="basketweave">Basketweave</option>
+      </select>
+    </div>
+    <div class="form-field">
+      <label class="form-label">Fit / Style</label>
+      <input class="form-input" id="f-fit" type="text" placeholder="e.g. Tailored Fit, Cuffed, Slim" />
+    </div>
+    <div class="form-field">
+      <label class="form-label">Size</label>
+      <input class="form-input" id="f-size" type="text" placeholder="e.g. 17.5/35 or XL" />
+    </div>
+    <div class="form-field">
+      <label class="form-label">Suit Mate (item ID)</label>
+      <input class="form-input" id="f-suitmate" type="text" placeholder="e.g. 35" />
+    </div>
+    <div class="form-field">
+      <label class="form-label">Note</label>
+      <input class="form-input" id="f-note" type="text" placeholder="e.g. Possible duplicate of #29" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="submitModal()" id="modal-submit-btn">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm reset modal -->
+<div class="modal-overlay" id="reset-modal" style="display:none" onclick="closeResetOnOverlay(event)">
+  <div class="modal-box" style="max-width:360px">
+    <div class="modal-header">
+      <div class="modal-title" style="color:#d97842">Reset Inventory?</div>
+      <button class="modal-close" onclick="document.getElementById('reset-modal').style.display='none'">&#x2715;</button>
+    </div>
+    <p style="font-size:14px;line-height:1.6;color:#c8c4bc">This replaces the shared inventory with the default 50-item set and clears all ratings. Everyone who has access will see the reset. Cannot be undone.</p>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="document.getElementById('reset-modal').style.display='none'">Cancel</button>
+      <button class="btn-danger" onclick="doReset()">Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- FIREBASE + APP LOGIC -->
+<!-- ============================================================ -->
+<script type="module">
+
+// ── CHANGE THIS TO UPDATE THE PASSWORD ──────────────────────────
+const PASSWORD = "Hawk569\u0021\u0040";
+// ────────────────────────────────────────────────────────────────
+
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, getDoc, setDoc, onSnapshot }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCFDUwIgIOAFE6EPnLmZpBp-s3psLcqnws",
+  authDomain: "wardrobe-app-6c285.firebaseapp.com",
+  projectId: "wardrobe-app-6c285",
+  storageBucket: "wardrobe-app-6c285.firebasestorage.app",
+  messagingSenderId: "488711522252",
+  appId: "1:488711522252:web:a141022bb2e03e4ee83f69"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const db    = getFirestore(fbApp);
+const INV_DOC     = doc(db, 'wardrobe', 'inventory');
+const RATINGS_DOC = doc(db, 'wardrobe', 'ratings');
+
+// ── PASSWORD GATE ─────────────────────────────────────────────────
+window.checkPassword = function() {
+  const val = document.getElementById('pw-input').value;
+  if (val === PASSWORD) {
+    document.getElementById('lock-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    initApp();
+  } else {
+    document.getElementById('pw-error').textContent = 'Incorrect password.';
+    document.getElementById('pw-input').value = '';
+  }
+};
+document.getElementById('pw-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') window.checkPassword();
+});
+
+// ── SEED DATA ────────────────────────────────────────────────────
+const SEED = [
+  { id:1,  category:'shirt',  brand:'Kirkland Signature',       name:'Blue/Pink/Lavender Plaid',          colors:['blue','pink','lavender'],  pattern:'plaid',       fit:'Tailored Fit',    size:'' },
+  { id:2,  category:'shirt',  brand:'Twillory',                 name:'Black Solid',                        colors:['black'],                   pattern:'solid',       fit:'Tailored Fit',    size:'' },
+  { id:3,  category:'shirt',  brand:"Nordstrom Men's Shop",     name:'Light Gray Herringbone',             colors:['gray'],                    pattern:'herringbone', fit:'Trim Fit',        size:'' },
+  { id:4,  category:'shirt',  brand:'Unbranded',                name:'White/Navy Mini Windowpane',         colors:['white','navy'],            pattern:'windowpane',  fit:'',                size:'' },
+  { id:5,  category:'shirt',  brand:'Brooks Brothers 346',      name:'Lavender/Blue Tattersall',           colors:['lavender','blue'],         pattern:'tattersall',  fit:'',                size:'XL' },
+  { id:6,  category:'shirt',  brand:'Jos. A. Bank',             name:'Gray/Lavender Micro Check',          colors:['gray','lavender'],         pattern:'check',       fit:'Tailored Fit',    size:'17.5/34-35' },
+  { id:7,  category:'shirt',  brand:'Kirkland Signature',       name:'White/Blue/Navy Windowpane',         colors:['white','blue','navy'],     pattern:'windowpane',  fit:'Traditional Fit', size:'' },
+  { id:8,  category:'shirt',  brand:'Kirkland Signature',       name:'Light Gray Glen Check',              colors:['gray'],                    pattern:'glen-check',  fit:'Tailored Fit',    size:'' },
+  { id:9,  category:'shirt',  brand:'Perry Ellis',              name:'Light Blue Geometric Print',         colors:['blue'],                    pattern:'geometric',   fit:'',                size:'' },
+  { id:10, category:'shirt',  brand:'Jos. A. Bank Traveler',    name:'White/Blue/Brown Plaid',             colors:['white','blue','brown'],    pattern:'plaid',       fit:'Tailored Fit',    size:'' },
+  { id:11, category:'shirt',  brand:'Johnston & Murphy',        name:'White/Blue Basketweave',             colors:['white','blue'],            pattern:'basketweave', fit:'',                size:'XXL' },
+  { id:12, category:'shirt',  brand:'Joseph Abboud',            name:'White/Blue Mini Tattersall',         colors:['white','blue'],            pattern:'tattersall',  fit:'Non-Iron',        size:'' },
+  { id:13, category:'shirt',  brand:'Unbranded',                name:'Light Blue/White Windowpane',        colors:['blue','white'],            pattern:'windowpane',  fit:'Cutaway Collar',  size:'' },
+  { id:14, category:'shirt',  brand:'No Iron',                  name:'Blue/Purple/Black Gingham',          colors:['blue','purple','black'],   pattern:'gingham',     fit:'',                size:'' },
+  { id:15, category:'shirt',  brand:"Nordstrom Men's Shop",     name:'Orange/Blue Gingham',                colors:['orange','blue'],           pattern:'gingham',     fit:'Tech-Smart',      size:'' },
+  { id:16, category:'shirt',  brand:'Haggar',                   name:'Periwinkle/Light Blue Solid',        colors:['blue'],                    pattern:'solid',       fit:'Classic Fit',     size:'' },
+  { id:17, category:'shirt',  brand:'Jos. A. Bank',             name:'White Solid Dobby',                  colors:['white'],                   pattern:'solid',       fit:'Tailored Fit',    size:'17/34-35' },
+  { id:18, category:'shirt',  brand:'Haggar',                   name:'White/Black Mini Windowpane',        colors:['white','black'],           pattern:'windowpane',  fit:'Classic Fit',     size:'' },
+  { id:19, category:'shirt',  brand:'Pronto Uomo',              name:'White Solid Twill',                  colors:['white'],                   pattern:'solid',       fit:'Classic Fit',     size:'18/34-35' },
+  { id:20, category:'shirt',  brand:'UNTUCKit',                 name:'Light Blue Dobby',                   colors:['blue'],                    pattern:'dobby',       fit:'Regular Fit',     size:'XXL' },
+  { id:21, category:'shirt',  brand:'Jos. A. Bank Traveler',    name:'White Solid',                        colors:['white'],                   pattern:'solid',       fit:'Tailored Fit',    size:'17.5/35' },
+  { id:22, category:'shirt',  brand:'Jos. A. Bank Reserve',     name:'Light Blue Herringbone',             colors:['blue'],                    pattern:'herringbone', fit:'Tailored Fit',    size:'' },
+  { id:23, category:'shirt',  brand:'Jos. A. Bank Reserve',     name:'Light Gray Herringbone',             colors:['gray'],                    pattern:'herringbone', fit:'Tailored Fit',    size:'' },
+  { id:24, category:'shirt',  brand:'Jos. A. Bank',             name:'Lavender/White Stripe',              colors:['lavender','white'],        pattern:'stripe',      fit:'Tailored Fit',    size:'17/34-35' },
+  { id:25, category:'jacket', brand:'Jos. A. Bank',             name:'Navy Solid Suit Jacket',             colors:['navy'],                    pattern:'solid',       fit:'Slim',            size:'', suitMate:35 },
+  { id:26, category:'jacket', brand:'Jos. A. Bank',             name:'Tan Solid Suit Jacket',              colors:['tan'],                     pattern:'solid',       fit:'',                size:'', suitMate:41 },
+  { id:27, category:'jacket', brand:'Jos. A. Bank',             name:'Blue/Navy Mini Check Suit Jacket',   colors:['blue','navy'],             pattern:'check',       fit:'',                size:'' },
+  { id:28, category:'jacket', brand:'Unbranded',                name:'Navy Solid Suit Jacket',             colors:['navy'],                    pattern:'solid',       fit:'',                size:'' },
+  { id:29, category:'jacket', brand:'Michael Kors',             name:'Black Solid Blazer',                 colors:['black'],                   pattern:'solid',       fit:'Slim',            size:'' },
+  { id:30, category:'jacket', brand:'Unbranded',                name:'Black Solid Blazer',                 colors:['black'],                   pattern:'solid',       fit:'',                size:'' },
+  { id:31, category:'jacket', brand:'Unbranded',                name:'Steel Blue/Gray Plaid Blazer',       colors:['blue','gray'],             pattern:'plaid',       fit:'',                size:'', suitMate:40 },
+  { id:32, category:'jacket', brand:'Jos. A. Bank',             name:'Dark Brown/Olive Houndstooth Blazer',colors:['brown','olive'],           pattern:'houndstooth', fit:'',                size:'' },
+  { id:33, category:'jacket', brand:'Jos. A. Bank',             name:'Tan/Brown Houndstooth Blazer',       colors:['tan','brown'],             pattern:'houndstooth', fit:'',                size:'' },
+  { id:34, category:'jacket', brand:'Michael Kors',             name:'Black Solid Blazer (2nd)',           colors:['black'],                   pattern:'solid',       fit:'',                size:'', note:'Possible duplicate of #29' },
+  { id:35, category:'pants',  brand:'Jos. A. Bank',             name:'Navy Dress Pants (cuffed)',          colors:['navy'],                    pattern:'solid',       fit:'Cuffed',          size:'', suitMate:25 },
+  { id:36, category:'pants',  brand:'Unbranded',                name:'Black Dress Pants (cuffed)',         colors:['black'],                   pattern:'solid',       fit:'Cuffed',          size:'' },
+  { id:37, category:'pants',  brand:'Unbranded',                name:'Navy Dress Pants (lighter)',         colors:['navy'],                    pattern:'solid',       fit:'Cuffed',          size:'' },
+  { id:38, category:'pants',  brand:'Unbranded',                name:'Black Dress Pants (flat front)',     colors:['black'],                   pattern:'solid',       fit:'Flat Front',      size:'' },
+  { id:39, category:'pants',  brand:'Unbranded',                name:'Dark Brown Dress Pants',             colors:['brown'],                   pattern:'solid',       fit:'',                size:'' },
+  { id:40, category:'pants',  brand:'Unbranded',                name:'Steel Blue/Gray Plaid Dress Pants',  colors:['blue','gray'],             pattern:'plaid',       fit:'',                size:'', suitMate:31 },
+  { id:41, category:'pants',  brand:'Jos. A. Bank',             name:'Tan/Khaki Dress Pants',              colors:['tan'],                     pattern:'solid',       fit:'Cuffed',          size:'', suitMate:26 },
+  { id:42, category:'pants',  brand:'Unbranded',                name:'Olive Dress Pants',                  colors:['olive'],                   pattern:'solid',       fit:'Cuffed',          size:'' },
+  { id:43, category:'pants',  brand:'Unbranded',                name:'Black Dress Pants (button-tab)',     colors:['black'],                   pattern:'solid',       fit:'Cuffed',          size:'', note:'Possible duplicate of #46' },
+  { id:44, category:'pants',  brand:'Unbranded',                name:'Charcoal/Dark Gray Dress Pants',     colors:['gray'],                    pattern:'solid',       fit:'Cuffed',          size:'' },
+  { id:45, category:'pants',  brand:'Unbranded',                name:'Navy Dress Pants (lighter wool)',    colors:['navy'],                    pattern:'solid',       fit:'Cuffed',          size:'' },
+  { id:46, category:'pants',  brand:'Unbranded',                name:'Black Dress Pants (2nd cuffed)',     colors:['black'],                   pattern:'solid',       fit:'Cuffed',          size:'', note:'Possible duplicate of #43' },
+  { id:47, category:'hat',    brand:'Unbranded',                name:'Black Wide-Brim Fedora (tan band)',  colors:['black'],                   pattern:'solid',       fit:'Wide Brim',       size:'' },
+  { id:48, category:'hat',    brand:'Unbranded',                name:'Dark Brown Fedora',                  colors:['brown'],                   pattern:'solid',       fit:'Classic',         size:'' },
+  { id:49, category:'hat',    brand:'Unbranded',                name:'Black Fedora (medium brim)',         colors:['black'],                   pattern:'solid',       fit:'Medium Brim',     size:'' },
+  { id:50, category:'hat',    brand:'Unbranded',                name:'Black Wide-Brim Fedora (no contrast)',colors:['black'],                  pattern:'solid',       fit:'Wide Brim',       size:'' },
+];
+
+// ── STATE ────────────────────────────────────────────────────────
+let inventory = [];
+let ratings   = {};
+let selected  = { jacket: null, shirt: null, pants: null, hat: null };
+let modalMode = 'add'; // 'add' | 'edit'
+let editingId = null;
+let unsubInv, unsubRatings;
+
+// ── COLOR MAP ────────────────────────────────────────────────────
+const COLOR_HEX = {
+  white:'#f5f5f0', black:'#1a1a1a', navy:'#1e2a47', blue:'#5b7fb8',
+  gray:'#8a8a8a', lavender:'#b8a5c8', pink:'#d4a5a5', purple:'#6b4e8a',
+  brown:'#6b4e3a', tan:'#c4a878', olive:'#5e6240', orange:'#d97842', charcoal:'#3a3a3a',
+};
+
+// ── CLASH ENGINE ─────────────────────────────────────────────────
+const HARD_CLASHES = [
+  { pair:['black','navy'],      msg:'Black + navy reads as a mistake. Wear the suit together or swap one out.' },
+  { pair:['brown','navy'],      msg:'Brown + navy clash unless one is very warm-toned and clearly recedes.' },
+  { pair:['brown','black'],     msg:'Brown + black fight. Pick one earth tone or one neutral.' },
+  { pair:['orange','purple'],   msg:'Orange + purple is loud in the wrong way for business.' },
+  { pair:['orange','lavender'], msg:'Orange + lavender compete without resolving.' },
+  { pair:['olive','navy'],      msg:'Olive + navy reads military-surplus unless one is clearly dominant.' },
+];
+const SOFT_CAUTIONS = [
+  { pair:['blue','purple'],   msg:"Blue + purple can bleed together. Make sure there's clear tonal separation." },
+  { pair:['gray','brown'],    msg:'Gray + brown is muddy unless one is clearly dominant. Check in full light.' },
+  { pair:['tan','pink'],      msg:'Tan + pink can wash out. Works better with contrast somewhere else.' },
+  { pair:['lavender','blue'], msg:'Lavender + blue are close in hue. Works only if shades are clearly distinct.' },
+];
+const PATTERN_SCALE   = { solid:0, herringbone:1, basketweave:1, dobby:1, geometric:1, tattersall:1, check:2, gingham:2, windowpane:2, 'glen-check':2, stripe:2, plaid:3, houndstooth:3 };
+const SHIRT_FORMALITY = { solid:3, herringbone:3, dobby:3, basketweave:2, tattersall:2, windowpane:2, 'glen-check':2, stripe:2, check:2, geometric:1, gingham:1, plaid:1, houndstooth:2 };
+const JACKET_FORMALITY= { solid:3, check:2, plaid:1, houndstooth:1, herringbone:2 };
+
+function analyzeOutfit(jacket, shirt, pants, hat) {
+  const present = [jacket, shirt, pants, hat].filter(Boolean);
+  if (present.length < 2) return { verdict:'clean', issues:[] };
+  const issues = [];
+  const allColors  = present.flatMap(i => i.colors);
+  const unique     = [...new Set(allColors)];
+
+  HARD_CLASHES.forEach(({pair,msg}) => {
+    if (unique.includes(pair[0]) && unique.includes(pair[1]))
+      issues.push({ severity:'clash', type:'color', msg });
+  });
+  SOFT_CAUTIONS.forEach(({pair,msg}) => {
+    if (unique.includes(pair[0]) && unique.includes(pair[1]))
+      issues.push({ severity:'caution', type:'color', msg });
+  });
+
+  const neutrals  = ['white','black','gray','navy','charcoal'];
+  const accents   = unique.filter(c => !neutrals.includes(c));
+  if (accents.length >= 3)
+    issues.push({ severity:'caution', type:'color', msg:`Three accent colors (${accents.join(', ')}). One should dominate; the others should accent.` });
+
+  const patterned = present.filter(i => i.pattern !== 'solid');
+  if (patterned.length >= 3) {
+    issues.push({ severity:'clash', type:'pattern', msg:'Three patterned pieces is too much. Keep one statement pattern, one subtle texture, rest solid.' });
+  } else if (patterned.length === 2) {
+    const [a, b] = patterned.map(i => PATTERN_SCALE[i.pattern] ?? 2);
+    const diff   = Math.abs(a - b);
+    if (diff === 0 && a >= 2)
+      issues.push({ severity:'clash', type:'pattern', msg:`Two similarly-scaled patterns (${patterned.map(i=>i.pattern).join(' + ')}) will compete. One needs to be micro or solid.` });
+    else if (diff === 0 && a === 1)
+      issues.push({ severity:'caution', type:'pattern', msg:`Two fine-scale patterns (${patterned.map(i=>i.pattern).join(' + ')}). Can work if colors are clearly distinct.` });
+    else if (diff === 1 && Math.max(a,b) >= 2)
+      issues.push({ severity:'caution', type:'pattern', msg:`Mixed pattern scales (${patterned.map(i=>i.pattern).join(' + ')}). Gap is there but small — make sure colors don't echo.` });
+  }
+
+  if (jacket && shirt) {
+    const jf = JACKET_FORMALITY[jacket.pattern] ?? 2;
+    const sf = SHIRT_FORMALITY[shirt.pattern]  ?? 2;
+    if (Math.abs(jf - sf) >= 2)
+      issues.push({ severity:'caution', type:'formality', msg:`Formality gap: ${jf > sf ? 'jacket is more formal' : 'shirt is more formal'} than the other piece.` });
+    if (jacket.pattern === 'solid' && shirt.pattern === 'solid') {
+      const shared = jacket.colors.filter(c => shirt.colors.includes(c) && c !== 'white');
+      if (shared.length > 0)
+        issues.push({ severity:'caution', type:'color', msg:`Jacket and shirt share ${shared.join(', ')} and both are solid. Add contrast with a pattern or clearly different shade.` });
+    }
+  }
+
+  if (jacket && pants && jacket.suitMate && pants.suitMate)
+    if (jacket.suitMate !== pants.id && pants.suitMate !== jacket.id)
+      issues.push({ severity:'caution', type:'suit', msg:'Both pieces are halves of different suits. Mixing separates only works if fabrics and shades are clearly different.' });
+
+  if (hat) {
+    const oc    = [jacket,shirt,pants].filter(Boolean).flatMap(i=>i.colors);
+    const blues = oc.filter(c=>['navy','blue'].includes(c)).length;
+    const warms = oc.filter(c=>['brown','tan','olive'].includes(c)).length;
+    if (hat.colors.includes('brown') && blues >= 2)
+      issues.push({ severity:'caution', type:'hat', msg:'Brown hat on a blue-dominant outfit. Brown and navy/blue are different families — the hat will feel disconnected.' });
+    if (hat.colors.includes('black') && warms >= 2)
+      issues.push({ severity:'caution', type:'hat', msg:'Black hat with warm earth tones. Black is cool — it contrasts rather than complements brown/tan. Try the brown fedora.' });
+  }
+
+  const verdict = issues.some(i=>i.severity==='clash') ? 'clash'
+                : issues.some(i=>i.severity==='caution') ? 'caution' : 'clean';
+  return { verdict, issues };
+}
+
+// ── FIREBASE SYNC ────────────────────────────────────────────────
+function setSyncStatus(state, msg) {
+  const bar = document.getElementById('sync-bar');
+  const txt = document.getElementById('sync-msg');
+  bar.className = 'sync-bar ' + state;
+  txt.textContent = msg;
+  if (state === 'saved') setTimeout(() => { bar.className = 'sync-bar'; }, 2500);
+}
+
+async function saveInventory() {
+  setSyncStatus('saving', 'Saving…');
+  try {
+    await setDoc(INV_DOC, { items: inventory });
+    setSyncStatus('saved', 'Saved');
+  } catch(e) {
+    setSyncStatus('error', 'Save failed — check connection');
+  }
+}
+
+async function saveRatings() {
+  try { await setDoc(RATINGS_DOC, { data: ratings }); } catch {}
+}
+
+// ── INIT APP ─────────────────────────────────────────────────────
+async function initApp() {
+  // Load inventory
+  try {
+    const snap = await getDoc(INV_DOC);
+    if (snap.exists() && snap.data().items?.length) {
+      inventory = snap.data().items;
+    } else {
+      inventory = SEED;
+      await setDoc(INV_DOC, { items: inventory });
+    }
+  } catch {
+    inventory = SEED;
+  }
+
+  // Load ratings
+  try {
+    const snap = await getDoc(RATINGS_DOC);
+    ratings = snap.exists() ? (snap.data().data || {}) : {};
+  } catch { ratings = {}; }
+
+  renderAll();
+
+  // Real-time listeners so changes from other users show up live
+  unsubInv = onSnapshot(INV_DOC, snap => {
+    if (snap.exists()) {
+      inventory = snap.data().items || [];
+      renderAll();
+    }
+  });
+  unsubRatings = onSnapshot(RATINGS_DOC, snap => {
+    if (snap.exists()) {
+      ratings = snap.data().data || {};
+      renderOutfitControls();
+    }
+  });
+}
+
+// ── RENDER ───────────────────────────────────────────────────────
+function renderAll() {
+  renderSubtitle();
+  renderSlots();
+  renderClashPanel();
+  renderOutfitControls();
+  renderPickers();
+  renderCloset();
+}
+
+function renderSubtitle() {
+  const el = document.getElementById('inventory-count');
+  const cats = ['shirt','jacket','pants','hat'];
+  const counts = cats.map(c => `${inventory.filter(i=>i.category===c).length} ${c}s`).join(' · ');
+  el.textContent = `${inventory.length} items · ${counts}`;
+}
+
+function colorDots(colors) {
+  return (colors||[]).map(c =>
+    `<div class="color-dot" title="${c}" style="background:${COLOR_HEX[c]||'#888'}"></div>`
+  ).join('');
+}
+
+function renderSlots() {
+  ['jacket','shirt','pants','hat'].forEach(cat => {
+    const id   = selected[cat];
+    const item = id ? inventory.find(i=>i.id===id) : null;
+    const el   = document.getElementById('slot-'+cat);
+    if (item) {
+      el.className = 'slot filled';
+      el.innerHTML = `
+        <div class="slot-label">${cap(cat)}</div>
+        <button class="slot-clear" onclick="clearSlot('${cat}')">&#x2715;</button>
+        <div class="slot-name">${item.name}</div>
+        <div class="slot-brand">${item.brand}</div>
+        <div class="color-dots">${colorDots(item.colors)}</div>`;
+    } else {
+      el.className = 'slot';
+      el.innerHTML = `<div class="slot-label">${cap(cat)}</div><div class="slot-empty">not selected</div>`;
+    }
+  });
+}
+
+function renderClashPanel() {
+  const el = document.getElementById('clash-panel');
+  const items = ['jacket','shirt','pants','hat'].map(c => selected[c] ? inventory.find(i=>i.id===selected[c]) : null);
+  if (!items.some(Boolean)) { el.innerHTML=''; return; }
+
+  const { verdict, issues } = analyzeOutfit(...items);
+  const vColor = verdict==='clash' ? '#d94040' : verdict==='caution' ? '#d9a040' : '#40a060';
+  const vBg    = verdict==='clash' ? '#3a1010' : verdict==='caution' ? '#2a2010' : '#0f2010';
+  const vBord  = verdict==='clash' ? '#8a2a2a' : verdict==='caution' ? '#7a5a10' : '#2a5a2a';
+  const vLabel = verdict==='clash' ? 'CLASH' : verdict==='caution' ? 'CAUTION' : 'CLEAN';
+  const vSub   = verdict==='clash'
+    ? `${issues.filter(i=>i.severity==='clash').length} hard conflict(s)`
+    : verdict==='caution' ? `${issues.length} thing(s) to watch`
+    : 'No conflicts detected';
+
+  const issueHtml = issues.map(issue => {
+    const ic = issue.severity==='clash' ? '#d94040' : '#d9a040';
+    const ib = issue.severity==='clash' ? '#2a1010' : '#1e1a10';
+    const ibord = issue.severity==='clash' ? '#6a2020' : '#4a3a10';
+    return `<div class="issue-row" style="background:${ib};border:1px solid ${ibord}">
+      <div class="issue-icon" style="color:${ic}">&#9888;</div>
+      <div>
+        <span class="issue-type" style="color:${ic}">${issue.type}</span>
+        <span class="issue-msg">${issue.msg}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="margin-top:14px">
+      <div class="verdict-banner" style="background:${vBg};border:1px solid ${vBord};${issues.length?'margin-bottom:0':''}">
+        <div class="verdict-dot" style="background:${vColor}"></div>
+        <span class="verdict-label" style="color:${vColor}">${vLabel}</span>
+        <span class="verdict-sub">${vSub}</span>
+      </div>
+      ${issueHtml}
+    </div>`;
+}
+
+function renderOutfitControls() {
+  const el    = document.getElementById('outfit-controls');
+  const items = ['jacket','shirt','pants','hat'].map(c => selected[c]);
+  if (!items.some(Boolean)) { el.innerHTML=''; return; }
+
+  const key    = items.filter(Boolean).sort((a,b)=>a-b).join('-');
+  const rating = ratings[key];
+
+  const rBtn = (r, label, color) => {
+    const active = rating===r;
+    return `<button class="rating-btn" onclick="rateOutfit('${r}')"
+      style="color:${active?'#0f0f0f':color};background:${active?color:'transparent'};border-color:${color}"
+    >${label}</button>`;
+  };
+
+  el.innerHTML = `
+    <div class="outfit-controls">
+      <button class="btn-secondary" onclick="clearOutfit()">Clear</button>
+      <div style="margin-left:auto;display:flex;gap:6px">
+        ${rBtn('pass','Pass','#7a3a3a')}
+        ${rBtn('works','Works','#5a6a3a')}
+        ${rBtn('sharp','Sharp','#c4a878')}
+      </div>
+    </div>`;
+}
+
+function renderPickers() {
+  ['jacket','shirt','pants','hat'].forEach(cat => {
+    const items = inventory.filter(i=>i.category===cat);
+    document.getElementById(`picker-title-${cat}`).textContent = `${cap(cat)}s (${items.length})`;
+    document.getElementById(`picker-${cat}`).innerHTML = items.map(item => `
+      <div class="picker-card ${selected[cat]===item.id?'selected':''}" onclick="selectItem('${cat}',${item.id})">
+        <span class="picker-check">&#x2713;</span>
+        <div class="picker-card-name">${item.name}</div>
+        <div class="picker-card-sub">${item.brand}${item.size?' · '+item.size:''}</div>
+        <div class="color-dots">${colorDots(item.colors)}</div>
+      </div>`).join('');
+  });
+}
+
+window.renderCloset = function() {
+  const q   = document.getElementById('search-input').value.toLowerCase();
+  const cat = document.getElementById('cat-filter').value;
+  let items = inventory.filter(i => {
+    if (cat !== 'all' && i.category !== cat) return false;
+    if (q) return i.name.toLowerCase().includes(q) || i.brand.toLowerCase().includes(q) ||
+                   (i.colors||[]).some(c=>c.includes(q)) || i.pattern.toLowerCase().includes(q);
+    return true;
+  });
+
+  const grid  = document.getElementById('items-grid');
+  const empty = document.getElementById('closet-empty');
+
+  if (!items.length) { grid.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display = 'none';
+
+  // Update filter label counts
+  const sel = document.getElementById('cat-filter');
+  sel.options[0].text = `All (${inventory.length})`;
+  ['shirt','jacket','pants','hat'].forEach((c,i) => {
+    sel.options[i+1].text = `${cap(c)}s (${inventory.filter(x=>x.category===c).length})`;
+  });
+
+  grid.innerHTML = items.map(item => `
+    <div class="item-card">
+      <div class="item-header">
+        <div>
+          <div class="item-meta">#${item.id} · ${item.category}</div>
+          <div class="item-name">${item.name}</div>
+          <div class="item-sub">${item.brand}${item.size?' · '+item.size:''}${item.fit?' · '+item.fit:''}</div>
+          <div class="item-pattern">${item.pattern}</div>
+          ${item.suitMate ? `<div class="item-mate">&#9670; Matches #${item.suitMate}</div>` : ''}
+          ${item.note     ? `<div class="item-note">&#9888; ${item.note}</div>` : ''}
+        </div>
+        <div class="item-actions">
+          <button class="icon-btn" onclick="openEditModal(${item.id})" title="Edit">&#9998;</button>
+          <button class="icon-btn danger" onclick="deleteItem(${item.id})" title="Delete">&#128465;</button>
+        </div>
+      </div>
+      <div class="color-dots">${colorDots(item.colors)}</div>
+    </div>`).join('');
+};
+
+// ── OUTFIT ACTIONS ───────────────────────────────────────────────
+window.selectItem = function(cat, id) {
+  selected[cat] = selected[cat] === id ? null : id;
+  renderSlots();
+  renderClashPanel();
+  renderOutfitControls();
+  renderPickers();
+};
+
+window.clearSlot = function(cat) {
+  selected[cat] = null;
+  renderSlots();
+  renderClashPanel();
+  renderOutfitControls();
+  renderPickers();
+};
+
+window.clearOutfit = function() {
+  selected = { jacket:null, shirt:null, pants:null, hat:null };
+  renderSlots();
+  renderClashPanel();
+  renderOutfitControls();
+  renderPickers();
+};
+
+window.rateOutfit = async function(rating) {
+  const key = ['jacket','shirt','pants','hat'].map(c=>selected[c]).filter(Boolean).sort((a,b)=>a-b).join('-');
+  if (!key) return;
+  ratings[key] = rating;
+  renderOutfitControls();
+  await saveRatings();
+};
+
+// ── TAB SWITCHING ────────────────────────────────────────────────
+window.switchTab = function(tab) {
+  document.getElementById('page-builder').className = 'page' + (tab==='builder'?' active':'');
+  document.getElementById('page-closet').className  = 'page' + (tab==='closet'?' active':'');
+  document.getElementById('tab-builder-btn').className = 'tab-btn' + (tab==='builder'?' active':'');
+  document.getElementById('tab-closet-btn').className  = 'tab-btn' + (tab==='closet'?' active':'');
+  if (tab==='closet') renderCloset();
+};
+
+// ── ITEM CRUD ────────────────────────────────────────────────────
+window.deleteItem = async function(id) {
+  inventory = inventory.filter(i => i.id !== id);
+  if (selected.jacket===id) selected.jacket=null;
+  if (selected.shirt===id)  selected.shirt=null;
+  if (selected.pants===id)  selected.pants=null;
+  if (selected.hat===id)    selected.hat=null;
+  renderAll();
+  await saveInventory();
+};
+
+// ── MODAL ────────────────────────────────────────────────────────
+window.openAddModal = function() {
+  modalMode = 'add';
+  editingId = null;
+  document.getElementById('modal-title').textContent = 'Add Item';
+  document.getElementById('modal-submit-btn').textContent = 'Add';
+  ['category','name','brand','colors','pattern','fit','size','suitmate','note'].forEach(f => {
+    const el = document.getElementById('f-'+f);
+    if (el) el.value = f==='category'?'shirt':f==='pattern'?'solid':'';
+  });
+  document.getElementById('item-modal').style.display = 'flex';
+};
+
+window.openEditModal = function(id) {
+  const item = inventory.find(i=>i.id===id);
+  if (!item) return;
+  modalMode = 'edit';
+  editingId = id;
+  document.getElementById('modal-title').textContent = `Edit #${id}`;
+  document.getElementById('modal-submit-btn').textContent = 'Save';
+  document.getElementById('f-category').value  = item.category || 'shirt';
+  document.getElementById('f-name').value      = item.name     || '';
+  document.getElementById('f-brand').value     = item.brand    || '';
+  document.getElementById('f-colors').value    = (item.colors||[]).join(', ');
+  document.getElementById('f-pattern').value   = item.pattern  || 'solid';
+  document.getElementById('f-fit').value       = item.fit      || '';
+  document.getElementById('f-size').value      = item.size     || '';
+  document.getElementById('f-suitmate').value  = item.suitMate ? String(item.suitMate) : '';
+  document.getElementById('f-note').value      = item.note     || '';
+  document.getElementById('item-modal').style.display = 'flex';
+};
+
+window.closeModal = function() {
+  document.getElementById('item-modal').style.display = 'none';
+};
+
+window.closeModalOnOverlay = function(e) {
+  if (e.target.id === 'item-modal') closeModal();
+};
+
+window.submitModal = async function() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { document.getElementById('f-name').focus(); return; }
+
+  const item = {
+    category: document.getElementById('f-category').value,
+    name,
+    brand:    document.getElementById('f-brand').value.trim()   || 'Unbranded',
+    colors:   document.getElementById('f-colors').value.split(',').map(c=>c.trim()).filter(Boolean),
+    pattern:  document.getElementById('f-pattern').value,
+    fit:      document.getElementById('f-fit').value.trim(),
+    size:     document.getElementById('f-size').value.trim(),
+    suitMate: document.getElementById('f-suitmate').value ? parseInt(document.getElementById('f-suitmate').value) : undefined,
+    note:     document.getElementById('f-note').value.trim() || undefined,
+  };
+
+  if (modalMode === 'add') {
+    item.id = Math.max(0, ...inventory.map(i=>i.id)) + 1;
+    inventory = [...inventory, item];
+  } else {
+    inventory = inventory.map(i => i.id===editingId ? { ...i, ...item, id:editingId } : i);
+  }
+
+  closeModal();
+  renderAll();
+  await saveInventory();
+};
+
+// ── RESET ────────────────────────────────────────────────────────
+window.confirmReset = function() {
+  document.getElementById('reset-modal').style.display = 'flex';
+};
+window.closeResetOnOverlay = function(e) {
+  if (e.target.id==='reset-modal') document.getElementById('reset-modal').style.display='none';
+};
+window.doReset = async function() {
+  document.getElementById('reset-modal').style.display = 'none';
+  inventory = SEED;
+  ratings   = {};
+  selected  = { jacket:null, shirt:null, pants:null, hat:null };
+  renderAll();
+  await saveInventory();
+  await saveRatings();
+};
+
+// ── HELPERS ──────────────────────────────────────────────────────
+function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+</script>
+</body>
+</html>
